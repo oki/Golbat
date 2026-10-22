@@ -565,8 +565,17 @@ func (pokemon *Pokemon) applyDerivedMoves(v encounter.Draw) {
 // taken on the record's own boost branch: the two branches' IV draws almost
 // always advance the generator equally, but not when the boosted branch's
 // nextInt(12) hits Java's rejection path.
+// derivableSpecies is false for a species whose encounter values are rolled
+// per player: Minior. Neither an encounter nor the encounter id's stream
+// describes the shared spawn, so its IVs, CP, level, moves, size and
+// shininess are never set. Pokemon live at most an hour, so this is
+// go-forward only; nothing clears stored values (UnownHash/Golbat#426).
+func derivableSpecies(pokemonId int16) bool {
+	return pokemonId != int16(pogo.HoloPokemonId_MINIOR)
+}
+
 func (pokemon *Pokemon) deriveSizeAndMovesIfAbsent() {
-	if !config.Config.DeriveIv || pokemon.IsStrong.ValueOrZero() {
+	if !config.Config.DeriveIv || pokemon.IsStrong.ValueOrZero() || !derivableSpecies(pokemon.PokemonId) {
 		return
 	}
 	v := encounter.For(uint64(pokemon.Id), pokemon.statsBoosted(), int32(int64OrZero(pokemon.Form)))
@@ -1866,7 +1875,7 @@ func (pokemon *Pokemon) deriveIvIfAbsent() {
 	if !config.Config.DeriveIv {
 		return
 	}
-	if pokemon.IsStrong.ValueOrZero() {
+	if pokemon.IsStrong.ValueOrZero() || !derivableSpecies(pokemon.PokemonId) {
 		return
 	}
 	// IVs already settled — by an encounter, or derived on an earlier
@@ -1965,6 +1974,10 @@ func (pokemon *Pokemon) cpInputs() cpInputs {
 
 // caller should setPokemonDisplay prior to calling this
 func (pokemon *Pokemon) addEncounterPokemon(ctx context.Context, db db.DbDetails, proto *pogo.PokemonProto, username string) {
+	// Minior's encounter stats are the encountering player's, not the spawn's.
+	if !derivableSpecies(pokemon.PokemonId) {
+		return
+	}
 	pokemon.SetShiny(null.BoolFrom(proto.PokemonDisplay.Shiny))
 	pokemon.SetCp(null.IntFrom(int64(proto.Cp)))
 	pokemon.SetMove1(null.IntFrom(int64(proto.Move1)))
@@ -2339,6 +2352,10 @@ func (pokemon *Pokemon) setPokemonDisplay(pokemonId int16, display *pogo.Pokemon
 }
 
 func (pokemon *Pokemon) repopulateIv(weather int64, isStrong bool) {
+	// Nothing to restore for Minior (see derivableSpecies).
+	if !derivableSpecies(pokemon.PokemonId) {
+		return
+	}
 	// pokemon.Weather holds the narrowed reading, so narrow the incoming one
 	// before deriving isBoosted from it (see narrowUint8). Out of range, the
 	// raw reading and the value that actually gets stored can classify
