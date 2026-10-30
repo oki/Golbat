@@ -48,6 +48,14 @@ func UpdateGymRecordWithGymInfoProto(ctx context.Context, db db.DbDetails, gymIn
 
 	updateGymGetMapFortCache(gym, true)
 	saveGymRecord(ctx, db, gym)
+
+	for _, defender := range gymInfo.GymStatusAndDefenders.GymDefender {
+		if profile := defender.GetTrainerPublicProfile(); profile.GetName() != "" {
+			if err := UpdatePlayerFromGymDefender(db, profile); err != nil {
+				log.Errorf("UpdateGymRecordWithGymInfoProto: player %q: %v", profile.GetName(), err)
+			}
+		}
+	}
 	return fmt.Sprintf("%s %s", gym.Id, gym.Name.ValueOrZero())
 }
 

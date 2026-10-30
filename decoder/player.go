@@ -1339,3 +1339,21 @@ func UpdatePlayerRecordWithPlayerSummary(db db.DbDetails, playerSummary *pogo.In
 	savePlayerRecord(db, player)
 	return nil
 }
+
+// UpdatePlayerFromGymDefender upserts the player record from the trainer
+// profile that a GymGetInfo response carries for each defender.
+func UpdatePlayerFromGymDefender(db db.DbDetails, publicProfile *pogo.PlayerPublicProfileProto) error {
+	player, err := getPlayerRecord(db, publicProfile.GetName(), "", "")
+	if err != nil {
+		return err
+	}
+	if player == nil {
+		player = &Player{
+			Name:      publicProfile.GetName(),
+			newRecord: true,
+		}
+	}
+	player.updateFromPublicProfile(publicProfile)
+	savePlayerRecord(db, player)
+	return nil
+}
