@@ -223,6 +223,8 @@ func (gym *Gym) updateGymFromGymInfoOutProto(fortId FortId, gymData *pogo.GymGet
 			MotivationNow         util.RoundedFloat4 `json:"motivation_now"`
 			CpNow                 int32              `json:"cp_now"`
 			CpWhenDeployed        int32              `json:"cp_when_deployed"`
+			PlayerName            string             `json:"player_name,omitempty"`
+			PlayerLevel           int32              `json:"player_level,omitempty"`
 		}
 
 		var defenders []pokemonGymDefender
@@ -252,6 +254,10 @@ func (gym *Gym) updateGymFromGymInfoOutProto(fortId FortId, gymData *pogo.GymGet
 				MotivationNow:         util.RoundedFloat4(motivatedPokemon.MotivationNow),
 				CpNow:                 motivatedPokemon.CpNow,
 				CpWhenDeployed:        motivatedPokemon.CpWhenDeployed,
+			}
+			if profile := protoDefender.GetTrainerPublicProfile(); profile != nil {
+				defender.PlayerName = profile.GetName()
+				defender.PlayerLevel = profile.GetLevel()
 			}
 			defenders = append(defenders, defender)
 		}
